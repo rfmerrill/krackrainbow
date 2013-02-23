@@ -208,18 +208,9 @@ void open_line(unsigned char line) {    // open the scaning line
 
 #define CYCLE_TIME 200
 
-uint16_t t_trigger;
-
-volatile unsigned char do_draw = 0;
-
-ISR(TIMER1_COMPA_vect) {
-  do_draw = 1;
-}
-
 void timer_init() {
   TCCR1B |= (1<<CS11) | (1<<WGM12); // Enable timer @ 1/8th CPU speed, CTC
   OCR1A = CYCLE_TIME;  // Timer will reset + fire interrupt when it reaches this value
-  TIMSK1 = _BV(OCIE1A); // Enable interrupt for compare A
 }
 
 uint8_t input_index;
@@ -232,6 +223,7 @@ void twi_init() {
 
 ISR(TWI_vect) {
 //  static uint16_t status_temp;
+   PORTD |= (1<<2);
 
 
   if (TW_STATUS == TW_SR_DATA_ACK) {
@@ -244,6 +236,7 @@ ISR(TWI_vect) {
     else
       input_index++;
 
+    PORTD &= ~(1<<2);
     return;
   }
 
@@ -255,6 +248,11 @@ ISR(TWI_vect) {
     case TW_SR_ARB_LOST_GCALL_ACK: // lost arbitration, returned ack
       input_index = 0;
       g_swapNow = 0; // If we haven't swapped yet, don't!
+      PORTD |= (1<<2);
+      PORTD &= ~(1<<2);
+      PORTD |= (1<<2);
+      PORTD &= ~(1<<2);
+      PORTD |= (1<<2);
       break;
 
     case TW_SR_DATA_ACK:       // data received, returned ack
@@ -273,6 +271,8 @@ ISR(TWI_vect) {
       break;
   }
   TWCR = _BV(TWEN) | _BV(TWEA) | _BV(TWIE) | _BV(TWINT);
+
+  PORTD &= ~(1<<2);
 }
 
 
@@ -297,7 +297,12 @@ int main(void) {
   sei();
 
   while (1) {
-    if (do_draw) {
+#if 0
+    PORTD |= (1<<2);
+    PORTD &= ~(1<<2);
+#endif
+    if (TIFR1 & _BV(OCF1A)) {
+        TIFR1 |= _BV(OCF1A);
         displayNextLine();
         do_draw = 0;
     }
