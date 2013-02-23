@@ -235,7 +235,10 @@ void twi_otherstuff() {
     case TW_SR_ARB_LOST_SLA_ACK:   // lost arbitration, returned ack
     case TW_SR_ARB_LOST_GCALL_ACK: // lost arbitration, returned ack
       input_index = 0;
-      g_swapNow = 0; // If we haven't swapped yet, don't!
+
+      if (g_swapNow)  // too soon! ignore this frame
+        input_index = 96;
+
       PORTD |= (1<<2);
       PORTD &= ~(1<<2);
       PORTD |= (1<<2);
