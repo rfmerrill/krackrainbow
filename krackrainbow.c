@@ -221,26 +221,7 @@ void twi_init() {
   TWCR = _BV(TWEN) | _BV(TWEA) | _BV(TWIE);
 }
 
-ISR(TWI_vect) {
-//  static uint16_t status_temp;
-   PORTD |= (1<<2);
-
-
-  if (TW_STATUS == TW_SR_DATA_ACK) {
-    buffer[!g_bufCurr][input_index] = TWDR;
-
-    TWCR = _BV(TWEN) | _BV(TWEA) | _BV(TWIE) | _BV(TWINT);
-
-    if (input_index >= 95)
-      input_index = 0;
-    else
-      input_index++;
-
-    PORTD &= ~(1<<2);
-    return;
-  }
-
-
+void twi_otherstuff() {
   switch (TW_STATUS) {
     case TW_SR_SLA_ACK:   // addressed, returned ack
     case TW_SR_GCALL_ACK: // addressed generally, returned ack
@@ -274,7 +255,6 @@ ISR(TWI_vect) {
 
   PORTD &= ~(1<<2);
 }
-
 
 
 int main(void) {
