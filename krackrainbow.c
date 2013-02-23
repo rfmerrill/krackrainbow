@@ -221,6 +221,13 @@ void twi_init() {
   TWCR = _BV(TWEN) | _BV(TWEA) | _BV(TWIE);
 }
 
+void store_byte(uint8_t byte) {
+  if (input_index < 96) {
+    buffer[!g_bufCurr][input_index] = byte;
+    input_index++;
+  }
+}
+
 void twi_otherstuff() {
   switch (TW_STATUS) {
     case TW_SR_SLA_ACK:   // addressed, returned ack
