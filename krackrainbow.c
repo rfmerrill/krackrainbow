@@ -278,7 +278,6 @@ ISR(TWI_vect) {
 
 
 int main(void) {
-  t_trigger = CYCLE_TIME;
 
   DDRD=0xff;        // Configure ports (see http://www.arduino.cc/en/Reference/PortManipulation): digital pins 0-7 as OUTPUT
   DDRC=0xff;        // analog pins 0-5 as OUTPUT
@@ -304,7 +303,6 @@ int main(void) {
     if (TIFR1 & _BV(OCF1A)) {
         TIFR1 |= _BV(OCF1A);
         displayNextLine();
-        do_draw = 0;
     }
   }
 
