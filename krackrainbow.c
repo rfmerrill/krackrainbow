@@ -100,6 +100,12 @@ void displayNextLine() {
     if (g_level>=BRIGHTNESS_LEVELS) {							// there are 16 levels of brightness (4bit) * 3 colors = 12bit resolution
       g_level=0;
     }
+    if (g_level < 6)
+      OCR1A = 100;
+    else if (g_level < 11)
+      OCR1A = 200;
+    else
+      OCR1A = 300;
   }
   g_circle++;
 
@@ -239,11 +245,6 @@ void twi_otherstuff() {
       if (g_swapNow)  // too soon! ignore this frame
         input_index = 96;
 
-      PORTD |= (1<<2);
-      PORTD &= ~(1<<2);
-      PORTD |= (1<<2);
-      PORTD &= ~(1<<2);
-      PORTD |= (1<<2);
       break;
 
     case TW_SR_DATA_ACK:       // data received, returned ack
@@ -263,7 +264,6 @@ void twi_otherstuff() {
   }
   TWCR = _BV(TWEN) | _BV(TWEA) | _BV(TWIE) | _BV(TWINT);
 
-  PORTD &= ~(1<<2);
 }
 
 
@@ -285,14 +285,16 @@ int main(void) {
   twi_init();
   sei();
 
+  PORTD &= ~(1<<2);
+
   while (1) {
-#if 0
-    PORTD |= (1<<2);
-    PORTD &= ~(1<<2);
-#endif
     if (TIFR1 & _BV(OCF1A)) {
         TIFR1 |= _BV(OCF1A);
+        PORTD |= (1<<2);
         displayNextLine();
+        PORTD &= ~(1<<2);
+        PORTD |= (1<<2);
+        PORTD &= ~(1<<2);
     }
   }
 

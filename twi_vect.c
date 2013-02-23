@@ -21,7 +21,6 @@ extern unsigned char buffer[2][96];
 void store_byte (uint8_t byte);
 
 ISR(TWI_vect) {
-   PORTD |= (1<<2);
    uint8_t the_byte;
 
 
@@ -30,7 +29,6 @@ ISR(TWI_vect) {
     TWCR = _BV(TWEN) | _BV(TWEA) | _BV(TWIE) | _BV(TWINT);
     store_byte(the_byte);
 
-    PORTD &= ~(1<<2);
 
   } else {
     twi_otherstuff();
