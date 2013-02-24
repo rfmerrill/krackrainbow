@@ -55,48 +55,67 @@ A variable should be declared volatile whenever its value can be changed by some
  */
 
 volatile uint8_t buffer_status[NUM_BUFFERS] = {0};
-//interrupt variables
+
 uint8_t g_line,g_level;
 
-//read from bufCurr, write to !bufCurr
-//volatile   //the display is flickerling, brightness is reduced
 uint8_t g_bufCurr;
 uint8_t g_bufNext;
 
-//flag to blit image
-volatile uint8_t g_swapNow;
 uint8_t g_circle;
 
 uint8_t auto_advance = 1;
 
-//data marker
-#define START_OF_DATA 0x10
-#define END_OF_DATA 0x20
-
-//FPS
-#define FPS 80.0f
 
 #define BRIGHTNESS_LEVELS 16
 #define LED_LINES 8
 #define CIRCLE BRIGHTNESS_LEVELS*LED_LINES
 
 
-void draw_next_line();
+void select_line();
 void shift_24_bit();
-void open_line(unsigned char);
+
+
+// We're basically doing manual PWM here. we display all lines
+// for each brightness level and then go on to the next one.
+
+// Since our shift registers are nice enough to have a latch
+// enable line, we can clock bits in at our leisure and then
+// trigger it
 
 void displayNextLine() {
-  draw_next_line();									// scan the next line in LED matrix level by level.
-  g_line+=2;	 								        // process all 8 lines of the led matrix
+  // First things first: latch in the values we clocked in
+  // last time.
+
+  PORTC |= SH_BIT_OE; // Turn off the LED drivers (inverted)
+  PORTC |= SH_BIT_LE;  // latch the shift register
+  PORTC &= ~SH_BIT_LE; // un-latch
+
+  // Pick our line
+  select_line();
+
+  PORTC &= ~SH_BIT_OE; // Turn the LED drivers back on.
+
+
+  // Great, that's done, now we can prepare the next line
+
+  // interlace lines, probably looks better.
+
+  g_line+=2;
+
   if(g_line==LED_LINES) {
     g_line=1;
   }
-  if(g_line>LED_LINES) {								// when have scaned all LED's, back to line 0 and add the level
+
+  // on to the next brightness level.
+
+  if(g_line>LED_LINES) {
     g_line=0;
-    g_level++;										// g_level controls the brightness of a pixel.
-    if (g_level>=BRIGHTNESS_LEVELS) {							// there are 16 levels of brightness (4bit) * 3 colors = 12bit resolution
+    g_level++;
+    if (g_level>=BRIGHTNESS_LEVELS) {
       g_level=0;
     }
+
+    // exponential brightness, looks way better
     if (g_level < 6)
       OCR1A = 100;
     else if (g_level < 11)
@@ -107,6 +126,7 @@ void displayNextLine() {
   g_circle++;
 
   if (g_circle==CIRCLE) {							// check end of circle - swap only if we're finished drawing a full frame!
+
     buffer_status[g_bufCurr] = BUFFER_CLEAN;
     buffer_status[g_bufNext] = BUFFER_BUSY;
     g_bufCurr = g_bufNext;
@@ -115,24 +135,70 @@ void displayNextLine() {
     g_circle = 0;
   }
 
+
+
+  //
   shift_24_bit();
 }
 
 
-// scan one line, open the scaning row
-void draw_next_line() {
-  DISABLE_OE						//disable MBI5168 output (matrix output blanked)
-				//super source driver, select all outputs off
+// We don't care about the other pins on ports
+// B and D (UART, SPI and an unused pin)
+// so we can cheat here.
 
-//  shift_24_bit();	// feed the leds
-  LE_HIGH
-  LE_LOW
+// Had the board design not insisted on keeping
+// the UART, SPI /and/ I2C pins free, we could
+// have just used one port for this whole thing.
 
-  CLOSE_ALL_LINE
-  open_line(g_line);
+// Also could have done the interlacing in hardware
+// and then just used the port register to keep track
+// of what line we're on, shifting it left (or right)
+// one bit every time.
 
-  ENABLE_OE							//enable MBI5168 output
+void select_line() {
+  if (g_line < 3) {
+    PORTD = 0;
+  } else {
+    PORTB = 0;
+  }
+
+  switch (g_line) {
+    case 0: {
+      PORTB = 0x04;
+      break;
+    }
+    case 1: {
+      PORTB = 0x02;
+      break;
+    }
+    case 2: {
+      PORTB = 0x01;
+      break;
+    }
+    case 3: {
+      PORTD = 0x80;
+      break;
+    }
+    case 4: {
+      PORTD = 0x40;
+      break;
+    }
+    case 5: {
+      PORTD = 0x20;
+      break;
+    }
+    case 6: {
+      PORTD = 0x10;
+      break;
+    }
+    case 7: {
+      PORTD = 0x08;
+      break;
+    }
+  }
 }
+
+
 
 
 // display one line by the color level in buffer
@@ -169,42 +235,6 @@ void shift_24_bit() {
   }
 }
 
-void open_line(unsigned char line) {    // open the scaning line
-  switch(line) {
-  case 0: {
-      open_line0
-      break;
-    }
-  case 1: {
-      open_line1
-      break;
-    }
-  case 2: {
-      open_line2
-      break;
-    }
-  case 3: {
-      open_line3
-      break;
-    }
-  case 4: {
-      open_line4
-      break;
-    }
-  case 5: {
-      open_line5
-      break;
-    }
-  case 6: {
-      open_line6
-      break;
-    }
-  case 7: {
-      open_line7
-      break;
-    }
-  }
-}
 
 #define CYCLE_TIME 200
 
@@ -237,7 +267,6 @@ int main(void) {
   g_line = 0;
   g_bufCurr = 0;
   g_bufNext = 1;
-  g_swapNow = 0;
   g_circle = 0;
 
   auto_advance = 1;
@@ -254,10 +283,13 @@ int main(void) {
 
   while (1) {
     if (TIFR1 & _BV(OCF1A)) {
+
         TIFR1 |= _BV(OCF1A);
+
         PORTD |= (1<<2);
         displayNextLine();
         PORTD &= ~(1<<2);
+
         // Don't handle commands just yet
 
         for (i = 0; i < NUM_BUFFERS; i++) {
@@ -265,6 +297,11 @@ int main(void) {
             buffer_status[i] = BUFFER_CLEAN;
         }
 
+
+        // Find the first buf after bufCurr which has data for us.
+        // If none, keep bufCurr
+        // If we've already found one last time around,
+        // don't waste cycles
 
         if (auto_advance && (g_bufNext == g_bufCurr)) {
             g_bufNext++;
