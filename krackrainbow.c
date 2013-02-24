@@ -54,8 +54,7 @@ A variable should be declared volatile whenever its value can be changed by some
  interrupt service routine.
  */
 
-extern unsigned char buffer[3][96];  //two buffers (backbuffer and frontbuffer)
-
+uint8_t buffer_status[3];
 //interrupt variables
 uint8_t g_line,g_level;
 
@@ -78,17 +77,6 @@ uint8_t g_circle;
 #define LED_LINES 8
 #define CIRCLE BRIGHTNESS_LEVELS*LED_LINES
 
-volatile uint8_t do_display;
-
-volatile uint8_t current_index;
-volatile uint8_t bus_error;
-
-
-
-register uint8_t input_limit asm ("r3");
-register uint8_t input_index asm ("r2");
-register uint8_t twsr_reg asm("r16");
-register uint8_t twdr_reg asm("r17");
 
 void draw_next_line();
 void shift_24_bit();
@@ -281,6 +269,10 @@ int main(void) {
   g_bufCurr = 0;
   g_swapNow = 0;
   g_circle = 0;
+
+  buffer_status[0] = 0;
+  buffer_status[1] = 0;
+  buffer_status[2] = 0;
 
   timer_init();
   twi_init();

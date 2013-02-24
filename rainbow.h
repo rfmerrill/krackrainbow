@@ -33,12 +33,12 @@
 //Clock input terminal for data shift on rising edge
 #define CLK_RISING  {PORTC &=~ SH_BIT_CLK; PORTC |= SH_BIT_CLK;}
 
-//Data strobe input terminal, Serial data is transfered to the respective latch when LE is high. 
+//Data strobe input terminal, Serial data is transfered to the respective latch when LE is high.
 //The data is latched when LE goes low.
 #define LE_HIGH     {PORTC |= SH_BIT_LE;}
 #define LE_LOW      {PORTC &=~ SH_BIT_LE;}
 
-//Output Enabled, when (active) low, the output drivers are enabled; 
+//Output Enabled, when (active) low, the output drivers are enabled;
 //when high, all output drivers are turned OFF (blanked).
 #define ENABLE_OE   {PORTC &=~ SH_BIT_OE;}
 #define DISABLE_OE  {PORTC |= SH_BIT_OE;}
@@ -57,6 +57,18 @@
 #define open_line6      {PORTD=0x10;}
 #define open_line7      {PORTD=0x08;}
 #define CLOSE_ALL_LINE  {PORTD&=~0xf8; PORTB&=~0x07;}
+
+
+register uint8_t input_index asm ("r2");
+register uint8_t input_limit asm ("r3");
+register uint8_t twsr_reg asm("r16");
+register uint8_t twdr_reg asm("r17");
+
+extern unsigned char buffer[3][96];
+extern uint8_t buffer_status[3];
+extern volatile uint8_t g_swapNow;
+extern uint8_t g_bufCurr;
+
 
 #endif
 

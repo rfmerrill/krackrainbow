@@ -6,23 +6,6 @@
 
 #include "rainbow.h"
 
-#define TWI_FREQ 400000UL
-#define F_CPU 16000000UL
-
-//#define SLAVE_ADDRESS 112
-
-void twi_otherstuff(void);
-
-// Globally reserve some registers so we can avoid pushing them.
-
-register uint8_t input_index asm ("r2");
-register uint8_t input_limit asm ("r3");
-register uint8_t twsr_reg asm("r16");
-register uint8_t twdr_reg asm("r17");
-
-extern unsigned char buffer[3][96];
-extern volatile uint8_t g_swapNow;
-extern uint8_t g_bufCurr;
 
 static uint8_t frameskip;
 
