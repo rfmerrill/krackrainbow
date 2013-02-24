@@ -1,29 +1,15 @@
 /*
- * rainbowduino firmware, Copyright (C) 2010-2011 michael vogt <michu@neophob.com>
+ * krackrainbow firmware, Copyright 2013 Robert "Finny" Merrill <rfmerrill@berkeley.edu>
  *
- * based on
- * -blinkm firmware by thingM
- * -"daft punk" firmware by Scott C / ThreeFN
- * -rngtng firmware by Tobias Bielohlawek -> http://www.rngtng.com
+ * Originally based on the neorainbow firmware by michael vogt <michu@neophob.com>,
+ * which was originally based on a bunch of other things.
  *
- * needed libraries:
- * -FlexiTimer (http://github.com/wimleers/flexitimer2)
- *
- * libraries to patch:
- * Wire:
- *  	utility/twi.h: #define TWI_FREQ 400000L (was 100000L)
- *                     #define TWI_BUFFER_LENGTH 98 (was 32)
- *  	wire.h: #define BUFFER_LENGTH 98 (was 32)
- *
- *
- * This file is part of neorainbowduino.
- *
- * neorainbowduino is free software; you can redistribute it and/or modify
+ * krackrainbow is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2, or (at your option)
  * any later version.
  *
- * neorainbowduino is distributed in the hope that it will be useful,
+ * krackrainbow is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -41,34 +27,49 @@
 
 #include "rainbow.h"
 
-#define TWI_FREQ 400000UL
-#define F_CPU 16000000UL
 
-//#define SLAVE_ADDRESS 112
-
-
-/*
-A variable should be declared volatile whenever its value can be changed by something beyond the control
- of the code section in which it appears, such as a concurrently executing thread. In the Arduino, the
- only place that this is likely to occur is in sections of code associated with interrupts, called an
- interrupt service routine.
- */
-
+// see rainbow.h
 volatile uint8_t buffer_status[NUM_BUFFERS] = {0};
 
-uint8_t g_line,g_level;
+uint8_t g_line,g_level;     // current row + current brightness level
+uint8_t g_bufCurr;          // buffer we are /currently/ rendering from
+uint8_t g_bufNext;          // buffer that we will switch to when done
 
-uint8_t g_bufCurr;
-uint8_t g_bufNext;
+uint8_t g_circle;           // basically just g_line * g_level, saves cycles
 
-uint8_t g_circle;
-
-uint8_t auto_advance = 1;
+uint8_t auto_advance = 1;   // Will mean something in the future.
 
 
-#define BRIGHTNESS_LEVELS 16
-#define LED_LINES 8
-#define CIRCLE BRIGHTNESS_LEVELS*LED_LINES
+// This timer "ticks" at 2 MHz, so a CYCLE_TIME of 200
+// means that it will fire every 1600 clock cycles,
+// or 10 kHz. It takes 8 * 16 = 128 rendering cycles to
+// draw a frame, so this gives us a frame rate of
+// approximately 80 FPS.
+
+#define CYCLE_TIME 200
+
+void timer_init() {
+  TCCR1B |= (1<<CS11) | (1<<WGM12); // Enable timer @ 1/8th CPU speed, Clear on compare
+  OCR1A = CYCLE_TIME;               // Timer will reset + fire interrupt when it reaches this value
+}
+
+
+// We don't have to worry about the TWI clock because we're
+// only a slave. Could probably swap out the clock crystal for
+// A bigger one and it would still work fine.
+
+// Squeezing the last of the bandwidth out of TWI was certainly
+// an exercise! See twi_vect.c
+
+void twi_init() {
+  input_index = 0;
+  input_buffer = 1;
+
+  TWAR = SLAVE_ADDRESS << 1;
+  TWCR = _BV(TWEN) | _BV(TWEA) | _BV(TWIE);
+}
+
+
 
 
 void select_line();
@@ -111,11 +112,14 @@ void displayNextLine() {
   if(g_line>LED_LINES) {
     g_line=0;
     g_level++;
+
     if (g_level>=BRIGHTNESS_LEVELS) {
       g_level=0;
     }
 
-    // exponential brightness, looks way better
+    // Change the timer frequency to give us a better range of brightness
+    // When it's linear the brightness levels got more same-y toward the top
+
     if (g_level < 6)
       OCR1A = 100;
     else if (g_level < 11)
@@ -123,21 +127,19 @@ void displayNextLine() {
     else
       OCR1A = 300;
   }
+
   g_circle++;
 
-  if (g_circle==CIRCLE) {							// check end of circle - swap only if we're finished drawing a full frame!
+  if (g_circle == CIRCLE) {
+    // It appears we've completed a whole frame! Now's the time to decide
+    // if we're going to switch buffers.
 
     buffer_status[g_bufCurr] = BUFFER_CLEAN;
     buffer_status[g_bufNext] = BUFFER_BUSY;
     g_bufCurr = g_bufNext;
-
-
-    g_circle = 0;
   }
 
-
-
-  //
+  // Send stuff out the shift register.
   shift_24_bit();
 }
 
@@ -233,24 +235,6 @@ void shift_24_bit() {
       CLK_RISING		//send notice to the MBI5168 that serial data should be processed
     }
   }
-}
-
-
-#define CYCLE_TIME 200
-
-void timer_init() {
-  TCCR1B |= (1<<CS11) | (1<<WGM12); // Enable timer @ 1/8th CPU speed, CTC
-  OCR1A = CYCLE_TIME;  // Timer will reset + fire interrupt when it reaches this value
-}
-
-
-
-void twi_init() {
-  input_index = 0;
-  input_buffer = 1;
-
-  TWAR = SLAVE_ADDRESS << 1;
-  TWCR = _BV(TWEN) | _BV(TWEA) | _BV(TWIE);
 }
 
 
