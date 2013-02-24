@@ -60,14 +60,22 @@
 
 
 register uint8_t input_index asm ("r2");
-register uint8_t input_limit asm ("r3");
+register uint8_t input_buffer asm ("r3");
 register uint8_t twsr_reg asm("r16");
 register uint8_t twdr_reg asm("r17");
 
+#define NUM_BUFFERS 3
+
 extern unsigned char buffer[3][96];
-extern uint8_t buffer_status[3];
-extern volatile uint8_t g_swapNow;
+
+#define BUFFER_CLEAN        0
+#define BUFFER_HAS_FRAME    1
+#define BUFFER_HAS_COMMAND  2
+#define BUFFER_BUSY         3
+
+extern volatile uint8_t buffer_status[NUM_BUFFERS];
 extern uint8_t g_bufCurr;
+extern uint8_t input_buffer;
 
 
 #endif

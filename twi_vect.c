@@ -7,7 +7,6 @@
 #include "rainbow.h"
 
 
-static uint8_t frameskip;
 
 ISR(TWI_vect) {
 
@@ -26,22 +25,14 @@ ISR(TWI_vect) {
     case TW_SR_GCALL_ACK: // addressed generally, returned ack
     case TW_SR_ARB_LOST_SLA_ACK:   // lost arbitration, returned ack
     case TW_SR_ARB_LOST_GCALL_ACK: // lost arbitration, returned ack
-      input_index = (&buffer[!g_bufCurr][0] - &buffer[0][0]);;
-      input_limit = input_index + 96;
-      frameskip = 0;
-
-      if (g_swapNow) {  // too soon! ignore this frame
-        input_limit = input_index;
-        frameskip = 1;
-      }
-
+      input_index = 0;
       break;
 
     case TW_SR_DATA_ACK:       // data received, returned ack
     case TW_SR_GCALL_DATA_ACK: // data received generally, returned ack
 
-      if (input_index < input_limit) {
-        buffer[0][input_index] = twdr_reg;
+      if (input_index < 96) {
+        buffer[input_buffer][input_index] = twdr_reg;
         input_index++;
       }
 
@@ -49,8 +40,16 @@ ISR(TWI_vect) {
 
     case TW_SR_STOP:
 
-      g_swapNow = !frameskip;
+       if (input_index == 96) {
+         buffer_status[input_buffer] = BUFFER_HAS_FRAME;
+       } else {
+         buffer_status[input_buffer] = BUFFER_HAS_COMMAND;
+       }
 
+       input_buffer++;
+       if (input_buffer == NUM_BUFFERS) {
+         input_buffer = 0;
+       }
 
       break;
   }

@@ -54,17 +54,20 @@ A variable should be declared volatile whenever its value can be changed by some
  interrupt service routine.
  */
 
-uint8_t buffer_status[3];
+volatile uint8_t buffer_status[NUM_BUFFERS] = {0};
 //interrupt variables
 uint8_t g_line,g_level;
 
 //read from bufCurr, write to !bufCurr
 //volatile   //the display is flickerling, brightness is reduced
 uint8_t g_bufCurr;
+uint8_t g_bufNext;
 
 //flag to blit image
 volatile uint8_t g_swapNow;
 uint8_t g_circle;
+
+uint8_t auto_advance = 1;
 
 //data marker
 #define START_OF_DATA 0x10
@@ -104,13 +107,10 @@ void displayNextLine() {
   g_circle++;
 
   if (g_circle==CIRCLE) {							// check end of circle - swap only if we're finished drawing a full frame!
+    buffer_status[g_bufCurr] = BUFFER_CLEAN;
+    buffer_status[g_bufNext] = BUFFER_BUSY;
+    g_bufCurr = g_bufNext;
 
-    cli();
-    if (g_swapNow==1) {
-      g_swapNow = 0;
-      g_bufCurr = !g_bufCurr;
-    }
-    sei();
 
     g_circle = 0;
   }
@@ -217,46 +217,15 @@ void timer_init() {
 
 void twi_init() {
   input_index = 0;
-  input_limit = 0;
+  input_buffer = 1;
 
   TWAR = SLAVE_ADDRESS << 1;
   TWCR = _BV(TWEN) | _BV(TWEA) | _BV(TWIE);
 }
 
-static uint8_t frameskip;
-
-void twi_otherstuff() {
-  switch (TW_STATUS) {
-    case TW_SR_SLA_ACK:   // addressed, returned ack
-    case TW_SR_GCALL_ACK: // addressed generally, returned ack
-    case TW_SR_ARB_LOST_SLA_ACK:   // lost arbitration, returned ack
-    case TW_SR_ARB_LOST_GCALL_ACK: // lost arbitration, returned ack
-      input_index = (&buffer[!g_bufCurr][0] - &buffer[0][0]);;
-      input_limit = input_index + 96;
-      frameskip = 0;
-
-      if (g_swapNow) {  // too soon! ignore this frame
-        input_limit = input_index;
-        frameskip = 1;
-      }
-
-      break;
-
-    case TW_SR_DATA_ACK:       // data received, returned ack
-    case TW_SR_GCALL_DATA_ACK: // data received generally, returned ack
-
-      break;
-
-    case TW_SR_STOP:
-      g_swapNow = !frameskip;
-      break;
-  }
-  TWCR = _BV(TWEN) | _BV(TWEA) | _BV(TWIE) | _BV(TWINT);
-
-}
-
 
 int main(void) {
+  int i, j;
 
   DDRD=0xff;        // Configure ports (see http://www.arduino.cc/en/Reference/PortManipulation): digital pins 0-7 as OUTPUT
   DDRC=0xff;        // analog pins 0-5 as OUTPUT
@@ -267,12 +236,15 @@ int main(void) {
   g_level = 0;
   g_line = 0;
   g_bufCurr = 0;
+  g_bufNext = 1;
   g_swapNow = 0;
   g_circle = 0;
 
-  buffer_status[0] = 0;
-  buffer_status[1] = 0;
-  buffer_status[2] = 0;
+  auto_advance = 1;
+
+  buffer_status[0] = BUFFER_HAS_FRAME;
+  buffer_status[1] = BUFFER_HAS_FRAME;
+  buffer_status[2] = BUFFER_HAS_FRAME;
 
   timer_init();
   twi_init();
@@ -286,6 +258,30 @@ int main(void) {
         PORTD |= (1<<2);
         displayNextLine();
         PORTD &= ~(1<<2);
+        // Don't handle commands just yet
+
+        for (i = 0; i < NUM_BUFFERS; i++) {
+          if (buffer_status[i] == BUFFER_HAS_COMMAND)
+            buffer_status[i] = BUFFER_CLEAN;
+        }
+
+
+        if (auto_advance && (g_bufNext == g_bufCurr)) {
+            g_bufNext++;
+
+            if (g_bufNext == NUM_BUFFERS)
+                g_bufNext = 0;
+
+            while ((buffer_status[g_bufNext] != BUFFER_HAS_FRAME) &&
+                   (g_bufNext != g_bufCurr)) {
+
+                g_bufNext++;
+
+                if (g_bufNext == NUM_BUFFERS)
+                  g_bufNext = 0;
+            }
+        }
+
         PORTD |= (1<<2);
         PORTD &= ~(1<<2);
     }
