@@ -84,6 +84,11 @@ volatile uint8_t current_index;
 volatile uint8_t bus_error;
 
 
+
+register uint8_t input_limit asm ("r3");
+register uint8_t input_index asm ("r2");
+
+
 void draw_next_line();
 void shift_24_bit();
 void open_line(unsigned char);
@@ -219,20 +224,17 @@ void timer_init() {
   OCR1A = CYCLE_TIME;  // Timer will reset + fire interrupt when it reaches this value
 }
 
-uint8_t input_index;
+
 
 void twi_init() {
   input_index = 0;
+  input_limit = 0;
+
   TWAR = SLAVE_ADDRESS << 1;
   TWCR = _BV(TWEN) | _BV(TWEA) | _BV(TWIE);
 }
 
-void store_byte(uint8_t byte) {
-  if (input_index < 96) {
-    buffer[!g_bufCurr][input_index] = byte;
-    input_index++;
-  }
-}
+uint8_t frameskip;
 
 void twi_otherstuff() {
   switch (TW_STATUS) {
@@ -240,26 +242,24 @@ void twi_otherstuff() {
     case TW_SR_GCALL_ACK: // addressed generally, returned ack
     case TW_SR_ARB_LOST_SLA_ACK:   // lost arbitration, returned ack
     case TW_SR_ARB_LOST_GCALL_ACK: // lost arbitration, returned ack
-      input_index = 0;
+      input_index = (&buffer[!g_bufCurr][0] - &buffer[0][0]);;
+      input_limit = input_index + 96;
+      frameskip = 0;
 
-      if (g_swapNow)  // too soon! ignore this frame
-        input_index = 96;
+      if (g_swapNow) {  // too soon! ignore this frame
+        input_limit = input_index;
+        frameskip = 1;
+      }
 
       break;
 
     case TW_SR_DATA_ACK:       // data received, returned ack
     case TW_SR_GCALL_DATA_ACK: // data received generally, returned ack
-        buffer[!g_bufCurr][input_index] = TWDR;
-
-        if (input_index >= 95)
-            input_index = 0;
-        else
-            input_index++;
 
       break;
 
     case TW_SR_STOP:
-      g_swapNow = 1;
+      g_swapNow = !frameskip;
       break;
   }
   TWCR = _BV(TWEN) | _BV(TWEA) | _BV(TWIE) | _BV(TWINT);
