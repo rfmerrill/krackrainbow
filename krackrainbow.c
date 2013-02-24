@@ -54,7 +54,7 @@ A variable should be declared volatile whenever its value can be changed by some
  interrupt service routine.
  */
 
-extern unsigned char buffer[2][96];  //two buffers (backbuffer and frontbuffer)
+extern unsigned char buffer[3][96];  //two buffers (backbuffer and frontbuffer)
 
 //interrupt variables
 uint8_t g_line,g_level;
@@ -87,7 +87,8 @@ volatile uint8_t bus_error;
 
 register uint8_t input_limit asm ("r3");
 register uint8_t input_index asm ("r2");
-
+register uint8_t twsr_reg asm("r16");
+register uint8_t twdr_reg asm("r17");
 
 void draw_next_line();
 void shift_24_bit();
@@ -234,7 +235,7 @@ void twi_init() {
   TWCR = _BV(TWEN) | _BV(TWEA) | _BV(TWIE);
 }
 
-uint8_t frameskip;
+static uint8_t frameskip;
 
 void twi_otherstuff() {
   switch (TW_STATUS) {
