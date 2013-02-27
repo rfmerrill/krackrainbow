@@ -270,9 +270,7 @@ int main(void) {
 
         TIFR1 |= _BV(OCF1A);
 
-        PORTD |= (1<<2);
         displayNextLine();
-        PORTD &= ~(1<<2);
 
         // Don't handle commands just yet
 
@@ -302,9 +300,6 @@ int main(void) {
                   g_bufNext = 0;
             }
         }
-
-        PORTD |= (1<<2);
-        PORTD &= ~(1<<2);
     }
   }
 
