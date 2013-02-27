@@ -50,12 +50,18 @@ ISR(TWI_vect) {
   // it's also surprisingly difficult to get it to actually use the dedicated
   // registers you tell it to.
 
-
   // If you do any of this in C, GCC allocates additional registers for no
   // good reason.
+
+#if 0
   asm ("lds   r16, 185");     // twsr_reg = TWSR
   asm ("andi  r16, lo8(-8)"); // twsr_reg &= TW_STATUS_MASK
   asm ("lds   r17, 187");     // twdr_reg = TWDR
+#else
+  twsr_reg = TWSR;
+  twsr_reg &= TW_STATUS_MASK;
+  twdr_reg = TWDR;
+#endif
 
   // This uses a register, but GCC is generally nice enough to reuse it later.
   // TWCR is in the "extended" io space so the sbi/cbi instructions don't work.
