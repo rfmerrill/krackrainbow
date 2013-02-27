@@ -53,16 +53,16 @@ ISR(TWI_vect) {
   // If you do any of this in C, GCC allocates additional registers for no
   // good reason.
 
-  asm ("lds   r24, 185");     // twsr_reg = TWSR
-  asm ("mov   r16, r24");
-  asm ("andi  r16, lo8(-8)"); // twsr_reg &= TW_STATUS_MASK
+  asm ("lds   r16, 185");     // twsr_reg = TWSR
   asm ("lds   r17, 187");     // twdr_reg = TWDR
+  asm ("andi  r16, lo8(-8)"); // twsr_reg &= TW_STATUS_MASK
 
   // This uses a register, but GCC is generally nice enough to reuse it later.
   // TWCR is in the "extended" io space so the sbi/cbi instructions don't work.
   // For some reason it doesn't like it if you clear TWINT for conditions other than
   // data received.
   if (__builtin_expect(!!(twsr_reg == TW_SR_DATA_ACK), 1)) {
+    asm("nop");  // We are apparently too fast!
     TWCR = _BV(TWEN) | _BV(TWEA) | _BV(TWIE) | _BV(TWINT);
 
     // If we want to save more registers and more cycles, we could
