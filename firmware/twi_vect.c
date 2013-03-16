@@ -129,6 +129,10 @@ ISR(TWI_vect) {
        }
 
       break;
+    case TW_BUS_ERROR:
+      // Bus error, we have to handle this or we lock the whole bus up.
+      TWCR = _BV(TWEN) | _BV(TWEA) | _BV(TWIE) | _BV(TWINT) | _BV(TWSTO);
+      return;
   }
 
   // TWCR |= _BV(TWINT) takes more cycles
