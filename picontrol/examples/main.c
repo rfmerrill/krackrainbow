@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 // This file is meant to be a framework for making cute little demos on krackrainbow
 // It's not the best way to do all things for sure, but with this template you can do
@@ -26,10 +27,17 @@ void output_frame (unsigned char address, unsigned char frame[192]) {
 #define FIRST_X(addr) (8*((addr-13)%6))
 #define FIRST_Y(addr) (8*((addr-13)/6))
 
-int main(void) {
+int main(int argc, char **argv) {
   int i = 0, j = 0, addr = 0;;
   int count = 0;
   unsigned char frame[192] = {0};
+  unsigned long delay;
+
+  if (argc > 1) {
+    delay = strtoul(argv[1], NULL, 0);
+  } else {
+    delay = 0;
+  }
     
   for (;;) {  
   for (addr = 13; addr <= 30; addr++) { 
@@ -42,6 +50,7 @@ int main(void) {
     output_frame(addr, frame);
     }
     
+    usleep(delay);
     count = (count + 1) % 6000;
   }
 
