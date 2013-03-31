@@ -96,6 +96,20 @@ void displayNextLine() {
 
   PORTC &= ~SH_BIT_OE; // Turn the LED drivers back on.
 
+  if (g_line == 0) {
+    // We just switched brightness levels
+
+    // Change the timer frequency to give us a better range of brightness
+    // When it's linear the brightness levels got more same-y toward the top
+
+    if (g_level < 6)
+      OCR1A = 100;
+    else if (g_level < 11)
+      OCR1A = 200;
+    else
+      OCR1A = 300;
+
+  }
 
   // Great, that's done, now we can prepare the next line
 
@@ -115,28 +129,16 @@ void displayNextLine() {
 
     if (g_level>=BRIGHTNESS_LEVELS) {
       g_level=0;
+
+      // It appears we've completed a whole frame! Now's the time to decide
+      // if we're going to switch buffers.
+
+      buffer_status[g_bufCurr] = BUFFER_CLEAN;
+      buffer_status[g_bufNext] = BUFFER_BUSY;
+      g_bufCurr = g_bufNext;
+
     }
 
-    // Change the timer frequency to give us a better range of brightness
-    // When it's linear the brightness levels got more same-y toward the top
-
-    if (g_level < 6)
-      OCR1A = 100;
-    else if (g_level < 11)
-      OCR1A = 200;
-    else
-      OCR1A = 300;
-  }
-
-  g_circle++;
-
-  if (g_circle == CIRCLE) {
-    // It appears we've completed a whole frame! Now's the time to decide
-    // if we're going to switch buffers.
-
-    buffer_status[g_bufCurr] = BUFFER_CLEAN;
-    buffer_status[g_bufNext] = BUFFER_BUSY;
-    g_bufCurr = g_bufNext;
   }
 
   // Send stuff out the shift register.
