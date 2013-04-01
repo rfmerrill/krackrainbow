@@ -1,6 +1,6 @@
 /*
  * This little program is a tool to make it easier to get pixels onto the board
- * Basically, you pipe the pixels in an easy-to-handle text format into this, and 
+ * Basically, you pipe the pixels in an easy-to-handle text format into this, and
  * it does the rest.
 
  * This program takes one argument, the path to the i2c device (usually /dev/i2c-0 and i2c-1)
@@ -36,9 +36,9 @@ int main(int argc, char **argv){
   int i;
 
   struct timeval tv_begin, tv_end, tv_diff;
-  char buffer[256] = {0};
-  unsigned char message[96] = {0};
-  
+  char buffer[1024] = {0};
+  unsigned char message[512] = {0};
+
   if (argv[1]) {
     fd = open(argv[1], O_RDWR);
   } else {
@@ -51,70 +51,35 @@ int main(int argc, char **argv){
     return EXIT_FAILURE;
   }
 
-#ifndef NDEBUG
-  printf("Running with debug enabled\n");
-#endif
 
   while (!feof(stdin) && !ferror(stdin)) {
     int c;
+    char *pc = buffer;
+    int idx = 0;
+    int odd = 0;
 
-    fgets(buffer, 256, stdin);
+    fgets(buffer, sizeof buffer, stdin);
 
-    // String should be at least 194 characters long
-    if (strlen(buffer) < 194) {
-      // ignore
-      continue;
-    }
+    while (*pc != '\0') {
+      c = hexdigit(*pc++);
 
+      if (c == 255) // Not a hex digit, skip
+        continue;
 
-    // First two characters should be the hex address of
-    // the target panel.
-
-    c = hexdigit(buffer[0]);
-
-    if (c == 255)
-      continue;
-
-    devAddr = hexdigit(buffer[1]);
-
-    if (devAddr == 255)
-      continue;
-
-    devAddr |= (c << 4);
-
-#ifndef NDEBUG
-    printf ("Sending to address %lu (chars %c%c)\n", devAddr, buffer[0], buffer[1]);
-#endif
-
-    // The rest is stuff to send to the I2C bus   
-
-    for (i = 0; i < 96; i++) {
-      c = hexdigit(buffer[(2*i)+2]);
-
-      if (c == 255) {
-#ifndef NDEBUG
-        printf("Character %c not recognized as hex digit\n", c);
-#endif
-        break;
+      if (odd) {
+        message[idx] |= c;
+        idx++;
+      } else {
+        message[idx] = c << 4;
       }
 
-      message[i] = c << 4;
-
-      c = hexdigit(buffer[(2*i)+3]);
-
-      if (c == 255) {
-#ifndef NDEBUG
-        printf("Character %c not recognized as hex digit\n", c);
-#endif
-        break;
-      }
-
-      message[i] |= c;
+      odd = !odd;
     }
 
-    if (c != 255) {
+    if (idx >= 2) {
+      devAddr = message[0];
       ioctl(fd, I2C_SLAVE, devAddr);
-      write(fd, message, 96);
+      write(fd, message + 1, idx-1);
     }
   }
 
