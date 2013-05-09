@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# DISCLAIMER: this exists for educational purposes only, to illustrate what krackoutput.c does to people
+# who might have trouble understanding it.
+# This version runs WAY slower. Don't use it. Use the C version.
+
 import sys
 import os
 import functools
