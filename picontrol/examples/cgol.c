@@ -68,7 +68,7 @@ void step_sim() {
 
 int main(int argc, char **argv) {
   int i = 0, j = 0, addr = 0;;
-  int count = 0;
+  int count = 10000;
   unsigned char frame[192] = {0};
   unsigned long delay;
 
@@ -81,15 +81,23 @@ int main(int argc, char **argv) {
 
   srand(time(NULL));
 
-  for (i = 0; i < 48; i++) {
-    for (j = 0; j < 24; j++) {
-      alive[0][i][j] = rand()%2;
-      neighbor_counts[0][i][j] = rand()%9;
-    }
-  }
 
   for (;;) {
-    step_sim();
+    if (count > 2000) {
+      count = 0;
+      srand(time(NULL));
+
+      for (i = 0; i < 48; i++) {
+        for (j = 0; j < 24; j++) {
+          alive[0][i][j] = rand()%2;
+          neighbor_counts[0][i][j] = rand()%9;
+        }
+      }
+    }
+    count++;
+
+    if (!(count % 2))
+     step_sim();
 
     for (addr = 13; addr <= 30; addr++) {
       for (i = 0; i < 64; i++) {
@@ -99,7 +107,11 @@ int main(int argc, char **argv) {
         int is_alive = alive[current_frame][xpos][ypos];
         int was_alive = alive[(1 - current_frame)][xpos][ypos];
 
-        if (is_alive) {
+        if (count % 2) {
+          frame[i] = 0;
+          frame[i+64] = 0;
+          frame[i+128] = (is_alive) ? 0xF : 0;
+        } else if (is_alive) {
           if (was_alive) {
             // blue
             frame[i] = 0;

@@ -21,7 +21,7 @@ void output_frame (unsigned char address, unsigned char frame[192]) {
 
   putchar('\n');
 
-  fflush(stdout);  
+  fflush(stdout);
 }
 
 #define FIRST_X(addr) (8*((addr-13)%6))
@@ -29,7 +29,6 @@ void output_frame (unsigned char address, unsigned char frame[192]) {
 
 int main(int argc, char **argv) {
   int i = 0, j = 0, addr = 0;;
-  int count = 0;
   unsigned char frame[192] = {0};
   unsigned long delay;
 
@@ -38,20 +37,19 @@ int main(int argc, char **argv) {
   } else {
     delay = 0;
   }
-    
-  for (;;) {  
-  for (addr = 13; addr <= 30; addr++) { 
-    for (i = 0; i < 64; i++) {
-      frame[i] = pixel_color(FIRST_X(addr) + (i%8), FIRST_Y(addr) + (i/8), count, 0);   
-      frame[i+64] = pixel_color(FIRST_X(addr) + (i%8), FIRST_Y(addr) + (i/8), count, 1);   
-      frame[i+128] = pixel_color(FIRST_X(addr) + (i%8), FIRST_Y(addr) +(i/8), count, 2);   
+
+  for (;;) {
+    for (addr = 13; addr <= 30; addr++) {
+      for (i = 0; i < 64; i++) {
+        frame[i] = pixel_color(FIRST_X(addr) + (i%8), FIRST_Y(addr) + (i/8), count, 0);
+        frame[i+64] = pixel_color(FIRST_X(addr) + (i%8), FIRST_Y(addr) + (i/8), count, 1);
+        frame[i+128] = pixel_color(FIRST_X(addr) + (i%8), FIRST_Y(addr) +(i/8), count, 2);
+      }
+
+      output_frame(addr, frame);
     }
 
-    output_frame(addr, frame);
-    }
-    
     usleep(delay);
-    count = (count + 1) % 6000;
   }
 
 }
