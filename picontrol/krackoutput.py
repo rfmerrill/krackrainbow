@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 
-# DISCLAIMER: this exists for educational purposes only, to illustrate what krackoutput.c does to people
-# who might have trouble understanding it.
-# This version runs WAY slower. Don't use it. Use the C version.
+# This actually runs decently now!
 
 import sys
 import os
-import functools
-import string
-import binascii
 import fcntl
+import re
 
 
 if len(sys.argv) < 2:
@@ -19,22 +15,14 @@ if len(sys.argv) < 2:
 
 devfd = os.open(sys.argv[1], os.O_WRONLY) 
 
-while True:
-  theline = sys.stdin.readline()
+nonhex = re.compile("[^0-9a-fA-F]")
 
-  if not theline:
-    break
-   
-  theline = ''.join(c for c in theline if c in string.hexdigits) 
-
-  if (len(theline) % 2) == 1:
-    theline = theline + '0'
-
+for theline in sys.stdin:
+  theline = nonhex.sub("", theline) 
+ 
   (address, packet) = (theline[0:2], theline[2:]) 
 
   address = int(address, 16)
-  packet = binascii.a2b_hex(packet.encode('ascii')) 
-
+  packet = bytes.fromhex(packet) 
   fcntl.ioctl(devfd, 0x0703, address)
   os.write(devfd, packet)
-
