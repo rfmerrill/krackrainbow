@@ -15,7 +15,7 @@ if len(sys.argv) < 2:
 
 devfd = os.open(sys.argv[1], os.O_WRONLY) 
 
-nonhex = re.compile("[^0-9a-fA-F]")
+nonhex = re.compile("[^0-9a-fA-F]*")
 
 for theline in sys.stdin:
   theline = nonhex.sub("", theline) 
