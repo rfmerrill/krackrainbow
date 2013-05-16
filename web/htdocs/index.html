@@ -1,0 +1,52 @@
+<html>
+<head>
+<title>Krackrainbow control</title>
+<style>
+a:link {text-decoration:none; color:#000000; }
+a:visited {text-decoration:none; color:#000000; }
+a:hover {text-decoration:none;   }
+a:active {text-decoration:none; background-color:#EEEEEE; }
+</style>
+</head>
+<body style='font-family: Helvetica,"Helvetica Neue",Arial,sans-serif; font-size: 200%;' onLoad="updateIt()">
+<script language="JavaScript">
+function sendRequest(url) {
+  foo = new XMLHttpRequest();
+  foo.open("GET", url, true);
+  foo.send(); 
+}
+
+
+function updateIt() {
+  foo = new XMLHttpRequest();
+  function mycallback() {
+    if (foo.readyState == 4) {
+      thepre = document.getElementById("i2coutput");
+      thepre.innerHTML="<pre>" + foo.responseText + "</pre>\n"  
+    }
+  }
+  foo.onreadystatechange = mycallback;
+  foo.open("GET", "/i2craw", true);
+  foo.send(); 
+}
+
+</script>
+<div style="width:100%; text-align: center;">
+<h2>I2C bus 1</h2>
+<div id="i2coutput"> 
+(loading)
+</div>
+<div style="height: 50%; font-size:300%;">
+
+<a href="#" onClick="sendRequest('/on')">
+<div style="height: 28%; background-color: #88FF88;">Power On</div>
+</a><a href="#" onClick="sendRequest('/off')">
+<div style="height: 28%; background-color: #FF8888;">Power Off</div>
+</a><a href="#" onClick="updateIt()">
+<div style="height: 28%; background-color: #8888FF;">Update</div>
+</a>
+</div>
+</div>
+</body>
+</html>
+
