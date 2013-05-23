@@ -58,6 +58,13 @@ class I2CDetectRaw(resource.Resource):
   def render_GET(self, request):
     return subprocess.check_output("i2cdetect -a -y 1", shell=True)
 
+class OutputPostpath(resource.Resource):
+  isLeaf = True
+  def render_GET(self, request):
+    print ' '.join(request.postpath)
+    sys.stdout.flush()
+    return "Done."
+
 
 
 root = static.File(sys.argv[1])
@@ -66,6 +73,7 @@ root.putChild("off", PowerOff())
 root.putChild("on", PowerOn())
 root.putChild("i2c", I2CDetect())
 root.putChild("i2craw", I2CDetectRaw())
+root.putChild("source", OutputPostpath())
 
 reactor.listenTCP(80, server.Site(root))
 reactor.run()
