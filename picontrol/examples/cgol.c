@@ -12,16 +12,25 @@ void output_frame (unsigned char address, unsigned char frame[192]) {
 
   for (i = 0; i < 192; i++) { putchar(conv_str[frame[i] % 16]); }
 
-  putchar('\n');
+  putchar('\n');  // put a newline character at the end of the stream
 
-  fflush(stdout);
+  fflush(stdout); // flush the stream to standard out
 }
 
 #define FIRST_X(addr) (8*((addr-13)%6))
 #define FIRST_Y(addr) (8*((addr-13)/6))
 
-
+/*
+  An array to count how many alive neighbors each pixel has.
+  Format is: [frame number][horizontal location][vertical location]
+*/
 int neighbor_counts[2][48][24] = { 0 };
+/*
+  Boolean array showing whether pixels are alive.  So, alive[1][12][15] == 1
+  says the pixel located at (x, y) = (12, 15) is alive in frame 1, and
+  alive[0][42][02] == 2 means the pixel located at (x, y) = (42, 02) is dead
+  in frame 0.
+*/
 int alive[2][48][24] = { 0 };
 
 int current_frame = 0;
@@ -31,24 +40,30 @@ void step_sim() {
   int next_frame;
   int is_alive, cnt;
 
-  current_frame = current_frame % 2;
-  next_frame = 1 - current_frame;
+  current_frame = current_frame % 2;  // use mod 2 arithmetic since we're only dealing with two frames
+  next_frame = 1 - current_frame; // set next_frame to be whatever current_frame isn't in the Z_2 group
 
   memset(neighbor_counts[next_frame], 0, sizeof neighbor_counts[0]);
   memset(alive[next_frame], 0, sizeof alive[0]);
 
-  for (x = 0; x < 48; x++) {
-    for (y = 0; y < 24; y++) {
-      is_alive = alive[current_frame][x][y];
-      cnt = neighbor_counts[current_frame][x][y];
+  for (x = 0; x < 48; x++) {  // for each column 0 to 47:
+    for (y = 0; y < 24; y++) {  // for each row 0 to 23:
+      is_alive = alive[current_frame][x][y];  // see if the pixel is alive
+      cnt = neighbor_counts[current_frame][x][y]; // grab how many of its neighbors are alive
 
-      if ((cnt == 3) || (is_alive && (cnt==2))) {
+      if ((cnt == 3) || (is_alive && (cnt==2))) { // if 3 of its neighbors are alive or it's alive with 2 alive neighbors:
+        /*
+          Grab the left, right, up, and down pixels using mod 48 and mod 24 arithmetic:
+        */
         int left = (x + 47) % 48;
         int right = (x + 49) % 48;
         int up = (y + 23) % 24;
         int down = (y + 25) % 24;
 
-        alive[next_frame][x][y] = 1;
+        alive[next_frame][x][y] = 1;  // set this pixel to alive
+        /*
+          Set this pixel's neighbor_counts, using the left, right, up, down, x, and y variables:
+        */
         neighbor_counts[next_frame][left][up]++;
         neighbor_counts[next_frame][right][up]++;
         neighbor_counts[next_frame][left][down]++;
@@ -99,7 +114,13 @@ int main(int argc, char **argv) {
     if (!(count % 2))
      step_sim();
 
+    /*
+      Iterate over the 18 panels, from 13 to 30 for some reason:
+    */
     for (addr = 13; addr <= 30; addr++) {
+      /*
+        Iterate over the 64 pixels on each panel, from 0 to 63:
+      */
       for (i = 0; i < 64; i++) {
         int xpos = FIRST_X(addr) + (i%8);
         int ypos = FIRST_Y(addr) + (i/8);
@@ -116,7 +137,7 @@ int main(int argc, char **argv) {
             // blue
             frame[i] = 0;
             frame[64+i] = 0;
-            frame[128+i] = 0xF;
+            frame[128+i] = 0xF; // 0xF = 15
           } else {
             // green
             frame[i] = 0xF;
