@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
             // blue
             frame[i] = 0;
             frame[64+i] = 0;
-            frame[128+i] = 0xF;
+            frame[128+i] = 0xF; // 0xF = 15
           } else {
             // green
             frame[i] = 0xF;
