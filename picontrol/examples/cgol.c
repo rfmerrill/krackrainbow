@@ -114,7 +114,13 @@ int main(int argc, char **argv) {
     if (!(count % 2))
      step_sim();
 
+    /*
+      Iterate over the 18 panels, from 13 to 30 for some reason:
+    */
     for (addr = 13; addr <= 30; addr++) {
+      /*
+        Iterate over the 64 pixels on each panel, from 0 to 63:
+      */
       for (i = 0; i < 64; i++) {
         int xpos = FIRST_X(addr) + (i%8);
         int ypos = FIRST_Y(addr) + (i/8);
