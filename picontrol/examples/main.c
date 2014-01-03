@@ -41,9 +41,9 @@ int main(int argc, char **argv) {
   for (;;) {
     for (addr = 13; addr <= 30; addr++) {
       for (i = 0; i < 64; i++) {
-        frame[i] = pixel_color(FIRST_X(addr) + (i%8), FIRST_Y(addr) + (i/8), count, 0);
-        frame[i+64] = pixel_color(FIRST_X(addr) + (i%8), FIRST_Y(addr) + (i/8), count, 1);
-        frame[i+128] = pixel_color(FIRST_X(addr) + (i%8), FIRST_Y(addr) +(i/8), count, 2);
+        frame[i] = pixel_color(FIRST_X(addr) + (i%8), FIRST_Y(addr) + (i/8), count, 0); // get red value for pixel
+        frame[i+64] = pixel_color(FIRST_X(addr) + (i%8), FIRST_Y(addr) + (i/8), count, 1); // get green value
+        frame[i+128] = pixel_color(FIRST_X(addr) + (i%8), FIRST_Y(addr) +(i/8), count, 2); // get blue value
       }
 
       output_frame(addr, frame);
