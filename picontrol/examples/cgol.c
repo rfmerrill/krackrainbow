@@ -12,9 +12,9 @@ void output_frame (unsigned char address, unsigned char frame[192]) {
 
   for (i = 0; i < 192; i++) { putchar(conv_str[frame[i] % 16]); }
 
-  putchar('\n');  // put a newline character at the end of the stream
+  putchar('\n');
 
-  fflush(stdout); // flush the stream to standard out
+  fflush(stdout);
 }
 
 #define FIRST_X(addr) (8*((addr-13)%6))
@@ -40,8 +40,8 @@ void step_sim() {
   int next_frame;
   int is_alive, cnt;
 
-  current_frame = current_frame % 2;  // use mod 2 arithmetic since we're only dealing with two frames
-  next_frame = 1 - current_frame; // set next_frame to be whatever current_frame isn't in the Z_2 group
+  current_frame = current_frame % 2;
+  next_frame = 1 - current_frame;
 
   memset(neighbor_counts[next_frame], 0, sizeof neighbor_counts[0]);
   memset(alive[next_frame], 0, sizeof alive[0]);
